@@ -10,10 +10,10 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
-    - name: Set up TeX Live
-      uses: dante-ev/ghactions-texlive@v1
-      with:
-        packages: full
+    - name: Install TeX Live
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y texlive-full
 
     - name: Compile LaTeX document
       run: |
@@ -25,3 +25,4 @@ jobs:
       with:
         name: compiled-pdf
         path: your-document.pdf
+        # Replace 'your-document.pdf' with the name of the output PDF
