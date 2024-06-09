@@ -21,10 +21,21 @@ The state of the reporting and availability portion of the protocol is largely c
 As usual, intermediate and posterior values ($\rho^\dagger$, $\rho^\ddagger$, $\rho'$) are held under the same constraints as the prior value.
 
 \subsubsection{Work Report}\label{sec:workreport}
-A work-report, of the set $\mathbb{W}$, is defined as a tuple of authorizer hash and output, the refinement context, the package specification and the results of the evaluation of each of the items in the package, which is always at least one item and may be no more than $\mathsf{I}$ items. Formally:
+A work-report, of the set $\mathbb{W}$, is defined as a tuple of authorizer hash $a$ and output $\mathbf{o}$, the refinement context $x$, the package specification $s$ and the results of the evaluation of each of the items in the package $\mathbf{r}$, which is always at least one item and may be no more than $\mathsf{I}$ items. Formally:
 \begin{equation}\label{eq:workreport}
-  \mathbb{W} \equiv \ltuple\isa{a}{\H}\ts\isa{o}{\Y}\ts\isa{x}{\mathbb{X}}\ts\isa{s}{\mathbb{S}}\ts\isa{r}{\seq{\mathbb{L}}_{1:\mathsf{I}}}\rtuple
+  \mathbb{W} \equiv \tuple{
+%    \begin{aligned}
+      \isa{a}{\H}\ts
+      \isa{\mathbf{o}}{\Y}\ts
+      \isa{x}{\mathbb{X}}\ts
+      % TODO: ^^^ Rename to c
+      \isa{s}{\mathbb{S}}\ts
+      \isa{\mathbf{r}}{\seq{\mathbb{L}}_{1:\mathsf{I}}}
+%    \end{aligned}
+  }\!\!\!\!\!
 \end{equation}
+
+% TODO: places where w \in \mathbb{W} : w_o should be replaced with w_\mathbb{o} and w_r with w_\mathbb{r}
 
 The total serialized size of a work-report may be no greater than $\mathsf{W}_R$ bytes:
 \begin{equation}
@@ -41,11 +52,20 @@ A \emph{refinement context}, denoted by the set $\mathbb{X}$, describes the cont
   \end{alignedat}\rtuple
 \end{equation}
 
-\subsubsection{Work Package Specification}
-We define the set of \emph{work-package specifications}, $\mathbb{S}$, as the tuple of the work-package's hash and serialized length together with an erasure root. Formally:
+\subsubsection{Availability}
+We define the set of \emph{availability specifications}, $\mathbb{S}$, as the tuple of the auditable work-package's hash $h$ and length $l$ together with an erasure-root $u$ and a segment-root $e$. Work-results include the availability specification for the encoding of the corresponding work-package. Formally:
 \begin{align}
-  \mathbb{S} &\equiv \ltuple\isa{h}{\H}\ts\isa{l}{\N_L}\ts\isa{u}{\H}\rtuple
+  \mathbb{S} &\equiv \tuple{
+    \isa{h}{\H}\ts
+    \isa{l}{\N_L}\ts
+    \isa{u}{\H}\ts
+    \isa{e}{\H}
+  }
 \end{align}
+
+The \emph{erasure-root} ($u$) is the root of a binary Merkle tree which functions as a commitment to all data chunks stored in the Audit DA and the Imports DA concerning this work report (and the ramifications of its corresponding work-package). It is used by assurers to verify the correctness of data they have been distributed and ensured correct by auditors. It is discussed properly in section \ref{sec:workpackagesandworkreports}.
+
+The \emph{segment-root} ($e$) is the root of a constant-depth, left-biased and zero-hash-padded binary Merkle tree committing to the hashes of each of the exported segments of each work-item. These are used by guarantors to verify the correctness of any reconstructed segments they are called upon to import for evaluation of some later work package. It is also discussed in section \ref{sec:workpackagesandworkreports}.
 
 \subsubsection{Work Result}
 We finally come to define a \emph{work result}, $\mathbb{L}$, which is the data conduit by which services' states may be altered through the computation done within a work-package.
@@ -164,13 +184,16 @@ We also define $\mathbf{G}^*$, which is equivalent to the value $\mathbf{G}$ as 
 \subsection{Work Report Guarantees}\label{sec:workreportguarantees}
 
 We begin by defining the guarantees extrinsic, $\mathbf{E}_G$, a series of \emph{guarantees}, at most one for each core, each of which is a tuple of a core index, \emph{work-report}, a credential $a$ and its corresponding timeslot $t$. Formally:
-\begin{equation}
-  \mathbf{E}_G \in \seq{\tuple{
+\begin{align}
+  \mathbf{E}_G &\in \seq{\tuple{
     c \in \N_\mathsf{C},\, w \in \mathbb{W},\, t \in \N_T,\, a \in \seq{\mathbb{E}?}_3
   }}_{:\mathsf{C}} \\
-\end{equation}
+  \forall g &\in \mathbf{E}_G : (g_a)_{\dots2} \in \seq{\mathbb{E}}_2
+\end{align}
 
-The credential is itself a sequence of either two or three tuples of a signature and a validator index. The core index of each guarantee must be in ascending order:
+The credential is itself a sequence of three tuples of a signature and a validator index $\mathbb{E}$. Only the final item may legitimately be $\none$.
+
+The core index of each guarantee must be in ascending order:
 \begin{align}
   \mathbf{E}_G = \orderby{i_c}{i \in \mathbf{E}_G}
 \end{align}

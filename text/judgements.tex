@@ -17,15 +17,7 @@ The judgements state includes three items, an allow-set ($\psi_\mathbf{a}$), a b
   \psi \equiv \tup{\psi_\mathbf{a}, \psi_\mathbf{b}, \psi_\mathbf{p}, \psi_\mathbf{k}}
 \end{equation}
 
-We store the last epoch's validator set in $\psi_\mathbf{k}$:
-\begin{equation}
-  \psi'_\mathbf{k} = \begin{cases}
-    \kappa &\when \displaystyle\ffrac{\tau'}{\mathsf{E}} \ne \ffrac{\tau}{\mathsf{E}}\\
-    \psi_\mathbf{k} &\otherwise
-  \end{cases}
-\end{equation}
-
-\subsection{Extrinsic}
+`\subsection{Extrinsic}
 
 The judgements extrinsic, $\mathbf{E}_J$ may contain one or more judgements as a compilation of signatures coming from exactly two-thirds plus one of either the active validator set (\ie the Ed25519 keys of $\kappa$) or the previous epoch's validator set (\ie the keys of $\psi_\mathbf{k}$):
 \begin{equation}
@@ -85,5 +77,5 @@ Note that the augmented punish-set is utilized when determining $\kappa'$ to nul
 
 The judgement marker must contain exactly the sequence of report hashes judged not as confidently valid (\ie either controversial or invalid). Formally:
 \begin{equation}
-  \mathbf{H}_j \equiv \sq{r \mid \tup{r, t} \orderedin \mathbf{J}, t \ne 0}
+  \mathbf{H}_j \equiv \sq{r \mid \tup{r, t} \orderedin \mathbf{J}, t \ne \floor{\nicefrac{2}{3}\mathsf{V}} + 1}
 \end{equation}

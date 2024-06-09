@@ -6,10 +6,61 @@ Build with xelatex.
 
 https://graypaper.com/
 
-## Remaining for v0.1
+## DA2
+
+### Underlying EC doesn't change
+- Every 4 KB segment is inflated to 12 KB and then split into 1024 * 12 byte chunks of which 342 are needed.
+
+### AuditDA vs ImportDA
+- AuditDA is short-term DA of ~8h.
+- AuditDA contents is only explicit and is only used by audits, never guarantors.
+- ImportDA is long-term DA of ~28d.
+- ImportDA contents is only programmatic and it is never used by auditors, only guarantors/public.
+- WP + extrinsic-segments + proven-imported-segments go into short-term DA in a single blob.
+- WP is provided separately to extrinsics in order to provide structure allowing guarantors to limit bandwidth exposure before is_authorized passes.
+- ImportDA load (exported segments) and AuditDA load (WP, extrinsic, imported segments) are non-competing resources of WP.
+- Extrinsic data is a bit cheaper than imported segments owing to less proof needed.
+
+- Guarantor is expected to fetch/reconstruct imported data, referenced within ImportDA, and place it in AuditDA along with correctness-proofs. (Auditors only ever touch AuditDA.)
+
+### ImportDA contents
+In order to provide a cryptographically secure commitment to what it exported (and reference scheme for later imports), all exported segments are hashed and Merklized and a commitment stored in the WR called the Segment Root.
+
+Exported data is stored in the ImportDA alongside additional segments containing data allowing proof of its correctness based on said Segment Root.
+
+Specifically, the segments are hashed and this sequence paginated in 64-entry pages, each of which forms a discrete sub-tree in the Segment Root's Merkle tree. The 64-hash page is coupled with a justification to the sub-tree from the Segment Root. Together they are placed in a "metadata" segment and erasure-coded, distributed, and reconstructed exactly as with the exported-data segments ImportDA.
+
+In order to ensure sub-trees are generally 64-entries, the binary Merkle tree is biased in a manner reminiscent of depth-first; all leaves are thus of depth $\lceil \log_2(s) \rceil$ where $s$ is the number of regular segments. Non-existent segments are represented by the null-hash.
+
+## Remaining for v0.2.0
 
 ### Content
-- [ ] Rewards. WAITING ON AL
+- [ ] Updated PVM
+- [ ] Remove extrinsic segment root. Rename "* segment-root" to just "segment-root".
+- [ ] Combine chunk-root for WP, concatenated extrinsics and concatenated imports.
+- [ ] Imports are host-call
+- [ ] Consider removal of the arrow-above notation in favour of subscript and ellipsis (this only works for the right-arrow).
+- [ ] Think about time and relationship between lookup-anchor block and import/export period.
+- [ ] Make work report field r bold.
+- [ ] Segmented DA v2
+  - [ ] Underlying EC doesn't change, need to make clear segments are just a double-EC
+  - [ ] Include full calculations for bandwidth requirements.
+  - [ ] Formalize as much as possible.
+  - [ ] Migrate formalization & explanation:
+    - [ ] guaranteeing-specific stuff into relevant section
+    - [ ] assurance-specific stuff into relevant section
+    - [ ] auditing-specific stuff into relevant section
+- [ ] Think about time and relationship between lookup-anchor block and import/export period.
+- [ ] Make work report field r bold.
+- [x] Need to translate the basic work result into an "L"; do it in the appendix to ease layout
+  - [x] service - easy
+  - [x] service code hash - easy
+  - [x] payload hash - easy
+  - [x] gas prioritization - just from WP?
+- [ ] Refine arguments
+  -  Currently passing in the WP hash, some WP fields and all manifest preimages.
+  - [ ] Consider passing in the whole work-package and a work-item index.
+  - [ ] Consider introducing a host-call for reading manifest data rather than always passing it in.
 
 ### Finesse
 - [ ] Make all subscript names capitalized.
@@ -18,7 +69,8 @@ https://graypaper.com/
 - [ ] All "where" and "let" lines are unnumbered/integrated
 - [ ] Remove any "TODOs" in text
 
-## Remaining for v0.2
+## Remaining for v0.3
+- [ ] Rewards.
 - [ ] Define Erasure Coding proof means
   - [ ] Define binary Merkle proof-generation function which compiles neighbours down to leaf.
   - [ ] Define binary Merkle proof-verification function exists sequence of values which contains our value and Merklised to some root.
@@ -54,105 +106,56 @@ https://graypaper.com/
 - Think harder about if the recent blocks, availability timeouts & anchor stuff is affected by using timeslot rather than height.
 - Make memo bounded, rather than fixed.
 - Lookup anchor: maybe it should be 48 hours since lookup anchor can already be up to 24 hours after reporting and we want something available up to 24 hours after that?
-
-### Extra DA
-
-DA lasts 28 days instead of 24h.
-
-WP has additional field `manifest: Vec<ManifestEntry>`:
-```rust
-struct Commitment {
-  hash: Hash,
-  len: u32,
-  erasure_root: Hash,
-}
-type CommitmentTreeRoot = Hash; //binary Merkle tree of `Commitment` leaves
-struct HashCommitment {
-  len: u32,
-  hash: Hash,
-}
-enum PackageManifestEntry {
-  Export(Vec<u8>),
-  Import(Commitment),
-  Renew(Commitment),
-  ExportCache(Vec<u8>),
-  ImportCache(Hash),
-  RenewCache { len: u32, hash: Hash },
-}
-```
-
-WR specification has extra field of type `manifest_root: CommitmentTreeRoot`.
-
-Affinity for validator indexes minimizes renewal xfer costs.
-
-Guarantor ECs WP, each proc-export/export/renewal; checks each import chunk is available for > 8h and fetches.
-Guarantor distributes chunks of proc-exports/exports/renewals.
-Auditor:
-- downloads/reconstitutes WP and all nodes of `manifest_root` and downloads/reconstitutes all exports/renewals.
-- ECs WP/exports/renewals
-
-Guaranteeing involves:
-- Fetching/Reconstucting all Imports & Renews
-- Fetching all ImportCaches & RenewCaches
-- Executing
-- ErasureCoding all Exports & GenExports & Renews
-- Distributing chunks of all Exports & GenExports & Renews
-- Hashing all ExportCaches & GenExportCaches
-- Distributing data of all ExportCaches & GenExportCaches & RenewCaches
-- Merklizing ErasureRoots/Hashes to create WR's `manifest_root`
-
-Auditing involves (10 of):
-- Fetching/Reconstucting all Exports, Imports & Renews
-- Fetching all ExportCaches & RenewCaches
-- ErasureCoding all Exports (Renews & Imports should already be audited)
-- Executing
-- ErasureCoding all GenExports
-- Hashing all GenExportCaches
-- Merklizing ErasureRoots/Hashes to verify WR's `manifest_root`
-
-
-`refine` has new host-call:
-- `export(payload: &[u8], cache: bool)`
-- Calling this introduces an additional node in the manifest tree (`manifest_root`), iff the overall manifest size is  constraints would break then the call fails. The WP does not become invalid.
-
-`refine` has new argument:
-- `, manifest_payloads: Vec<(Hash, Vec<u8>)>`
-
-const BASE: u32 = 2048; // Example - might be less.
-
-
-
-let dist = |WP| + SUM_{Export(payload) in M}(payload.len() + BASE) + SUM_{Renew(c) in M}(c.len + BASE) + SUM_{ExportCache(c) in M}(c.len() * 341 + BASE) + SUM_{RenewCache{len, ..} in M}(len * 341 + BASE)
-
-let ecode = |WP| + SUM_{Export(payload) in M}(payload.len() + BASE) + SUM_{Renew(c) in M}(c.len + BASE) + SUM_{ExportCache(c) in M}(c.len() * 341 + BASE) + SUM_{RenewCache{len, ..} in M}(len * 341 + BASE)
-let reco = |WP| + SUM_{Import(c) in M, Renew(c) in M}(c.len + BASE)
-
-WP is valid iff: max(dist, reco) <= 8MB
-WP is available iff: all imports are in DA now and will still be in DA 8 hours from now
-
+- Consider VRF proof when requesting chunk so validators are equally responsible.
+- Refine arguments: currently passing in the WP hash, some WP fields and all manifest preimages.
+  - Consider passing in the whole work-package and a work-item index.
+  - Consider passing in the work-item.
+  - Consider introducing a host-call for reading manifest data rather than always passing it in.
 
 ## Additional work
 - [ ] Proper gas schedule.
+  - [ ] Clever gas for export/import host calls
 - [ ] Networking protocol.
+  - [ ] Block distribution via EC and proactive-chunk-redistribution
+  - [ ] Guarantor-guarantor handover
+  - [ ] Star-shaped Point-to-point extrinsic distribution
 - [ ] Off-chain sub-protocols:
   - [ ] Better integration to Grandpa
   - [ ] Better description of Beefy
 - [ ] Full definition of Bandersnatch RingVRF.
-- [x] Independent definition of PVM.
 - [ ] PVM:
   - [ ] Aux registers?
   - [ ] Move to 64-bit?
   - [ ] No pages mappable in first 64 KB 
 
-% No persistent distance between parts as in eth, cos, dot etc
-
 % A set of independent, sequential, asynchronously interacting 32-octet state machines each of whose transitions lasts around 2 seconds of webassembly computation if a predetermined and fixed program and whose transition arguments are 5 MB. While well-suited to the verification of substrate blockchains, it is otherwise quite limiting.
-
-
 
 ## Done
 
 ### Texty
+- DA2
+  - [x] Update chunks/segments to new size of 12 bytes / 4KB in the availability sections, especially the work packages and work reports section and appendix H.
+  - [x] `export` is in multiples of 4096 bytes.
+  - [x] Manifest specifies WI (maximum) export count.
+  - [x] `import` is provided as concatenated segments of 4096 bytes, as per manifest.
+  - [x] Constant-depth merkle root
+  - [x] (Partial) Merkle proof generation function
+  - [x] New erasure root (4 items per validator; 2 hashes + 2 roots).
+  - [x] Specification of import hash (to include concatenated import data and proof).
+    - [x] Proof spec.
+    - [x] Specification of segment root.
+  - [x] Additional two segment-roots in WR.
+    - [x] Specification of segment tree.
+  - [x] Specification of segment proofs.
+  - [x] Specification of final segments for DA and ER.
+  - [x] Re-erasure-code imports.
+  - [x] Fetching imports and verification.
+- [x] Independent definition of PVM.
+- [x] Need to translate the basic work result into an "L"; do it in the appendix to ease layout
+  - [x] service - easy
+  - [x] service code hash - easy
+  - [x] payload hash - easy
+  - [x] gas prioritization - just from WP?
 - [x] Edit Previous Work.
 - [x] Edit Discussion.
 - [x] Document guide at beginning.

@@ -85,7 +85,7 @@ In addition to the active set of validator keys $\kappa$ and staging set $\iota$
 
 We must introduce $\mathbb{K}$, the set of validator key tuples. This is a combination of cryptographic public keys for Bandersnatch and Ed25519 cryptography, and a third metadata key which is an opaque octet sequence, but utilized to specify practical identifiers for the validator, not least a hardware address.
 
-The set of validator keys itself is equivalent to the set of 176-octet sequences. However, for clarity, we divide the sequence into four easily denoted components. For any validator key $v$, the Bandersnatch key is denoted $v_b$, and is equivalent to the first 32-octets; the Ed25519 key, $v_e$, is the second 32 octets; the BLS key denoted $v_{BLS}$ is equivalent to the following 144 octets, and finally the metadata $v_m$ is the last 128 octets. Formally:
+The set of validator keys itself is equivalent to the set of 336-octet sequences. However, for clarity, we divide the sequence into four easily denoted components. For any validator key $v$, the Bandersnatch key is denoted $v_b$, and is equivalent to the first 32-octets; the Ed25519 key, $v_e$, is the second 32 octets; the BLS key denoted $v_{BLS}$ is equivalent to the following 144 octets, and finally the metadata $v_m$ is the last 128 octets. Formally:
 \begin{align}
   \mathbb{K} &\equiv \mathbb{Y}_{336} \\
   \forall v \in \mathbb{K} : v_b \in \H_B &\equiv v_{0\dots+32} \\
@@ -98,11 +98,10 @@ With a new epoch under regular conditions, validator keys get rotated and the ep
 \begin{equation}
   \begin{aligned}
     \!\!\!\!\!\!\!\!\!\!\!\!(\gamma'_\mathbf{k}, \kappa', \lambda', \gamma'_z) &\equiv \begin{cases} (\iota, N(\gamma_\mathbf{k}), N(\kappa), z) \!\!\!\!&\when e' > e \wedge \mathbf{H}_J \ne [] \\ (\gamma_\mathbf{k}, N(\kappa), N(\lambda), \gamma_z) \!\!\!\!&\otherwise \end{cases}\!\!\!\!\!\!\!\! \\
-    \where z &= \mathcal{R}([k_b \mid k \orderedin \gamma'_\mathbf{k}]) \\
+    \where z &= \mathcal{O}([k_b \mid k \orderedin \gamma'_\mathbf{k}]) \\
     \also N(\mathbf{k}) &\equiv \sq{\begin{rcases} [0, 0, \dots] &\when k_e \in \psi'_\mathbf{p} \\ k &\otherwise \end{rcases} \,\middle\mid\, k \orderedin \mathbf{k}}
   \end{aligned}
 \end{equation}
-
 
 Note that the posterior active validator key set $\kappa'$ is defined such that keys belonging to the historical judgement punish set $\psi'_\mathbf{p}$ are replaced with a null key containing only zeroes. The origin of this punish set is explained in section \ref{sec:judgements}.
 
