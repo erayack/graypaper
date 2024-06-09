@@ -25,7 +25,7 @@ jobs:
 
     - name: Compile LaTeX document
       run: |
-        latexmk -pdf -interaction=nonstopmode greypaper.tex
+        latexmk -pdf -interaction=nonstopmode graypaper.tex
         # Replace 'your-document.tex' with the name of your main .tex file
 
     - name: Upload PDF artifact
