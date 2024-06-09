@@ -15,12 +15,17 @@ jobs:
       uses: zauguin/install-texlive@v3
       with:
         packages: >
-          l3build latex latex-bin luatex latex-bin-dev
+          latexmk
+          l3build
+          latex
+          latex-bin
+          luatex
+          latex-bin-dev
           # Add any additional packages you need here
 
     - name: Compile LaTeX document
       run: |
-        latexmk -pdf -interaction=nonstopmode graypaper.tex
+        latexmk -pdf -interaction=nonstopmode greypaper.tex
         # Replace 'your-document.tex' with the name of your main .tex file
 
     - name: Upload PDF artifact
