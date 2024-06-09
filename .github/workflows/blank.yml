@@ -21,11 +21,12 @@ jobs:
           latex-bin
           luatex
           latex-bin-dev
+          collection-amslatex  # Include the AMS LaTeX collection
           # Add any additional packages you need here
 
     - name: Compile LaTeX document
       run: |
-        latexmk -pdf -interaction=nonstopmode graypaper.tex
+        latexmk -pdf -interaction=nonstopmode your-document.tex
         # Replace 'your-document.tex' with the name of your main .tex file
 
     - name: Upload PDF artifact
